@@ -1,19 +1,6 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Sep 27 13:33:17 2017
-
-@author: tgadfort
-"""
-
-#from warnings import warn
-#from mutagen.id3 import ID3, TYER
 from mutagen.easyid3 import EasyID3, ID3
 from mutagen.id3 import TXXX
-import sys
-from os.path import getsize
-if '/Users/tgadfort/Python' not in sys.path:
-    sys.path.insert(0, '/Users/tgadfort/Python')
+from fsUtils import getSize
 
 
 ###############################################################################
