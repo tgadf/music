@@ -1,5 +1,6 @@
 from searchUtils import findDirsPattern, findWalkExt
 from fileUtils import getBaseFilename, getFileBasics
+from fsUtils import setFile
 from ioUtils import saveFile, getFile
 from timeUtils import clock, elapsed
 from musicBase import musicBase
@@ -15,6 +16,7 @@ class musicFinder(musicBase):
         musicBase.__init__(self, debug=debug)
         
         self.pb = pathBasics()
+
         
     def findMusic(self):
         for idir in self.getMusicDirPaths():
@@ -23,8 +25,9 @@ class musicFinder(musicBase):
             print("Found {0} files.".format(len(files)))
             retval = {ifile: self.pb.getPaths(ifile).getDict() for ifile in files}
             print("Processed {0} paths.".format(len(retval)))
-            savename = setFile(self.getDBDir(), "{0}.p".format(idir))
+            savename = setFile(self.getDBDir(), "Music-{0}.p".format(idir))
             saveFile(ifile=savename, idata=retval, debug=True)
+            
             
     def getMusicDBs(self):
         files = findExt(basedir=self.getDBDir(), ext="*.p")
@@ -36,7 +39,7 @@ class musicFinder(musicBase):
     # File Pathname Analysis
     ##################################################################################
     def findMusicDBPaths(self):        
-        for idirfile in self.getMusicListFiles():
+        for idirfile in self.dbs:
             dbdata = {}
             print("Analyzing {0}".format(idirfile))
             data = getFile(idirfile)

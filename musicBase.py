@@ -14,9 +14,9 @@ class musicBase():
             print("#"*60)
             print("")
         
-        dbdir="db"
-        datadir="data"
-        resultsdir="results"
+        dbdir           = "MusicDB"
+        datadir         = "data"
+        resultsdir      = "results"
         self.dbdir      = dbdir
         self.datadir    = datadir
         self.resultsdir = resultsdir
@@ -71,7 +71,7 @@ class musicBase():
         return self.musicdir
     
     def getDBDir(self):
-        dirname = setDir(self.getBaseDir(), self.dbdir)
+        dirname = setDir(self.getMusicDir(), self.dbdir)
         if not isDir(dirname): mkDir(dirname)
         return dirname
 
