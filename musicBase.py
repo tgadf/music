@@ -117,17 +117,16 @@ class musicBase():
         return tagDB
     
     def getMusicTagDBs(self):
-        files = findExt(basedir=self.getDBDir(), ext="*-Tags.p")
+        files = findExt(basedir=self.getDBDir(), ext="MusicTags-*.p")
         print("Found {0} DB Files".format(len(files)))
         return files
-    
-    
+        
     def getMusicPathDB(self, cls):
         pathDB = getFile(setFile(self.getDBDir(), "{0}-Paths.p".format(cls)))
         return pathDB
     
     def getMusicPathDBs(self):
-        files = findExt(basedir=self.getDBDir(), ext="*-Paths.p")
+        files = findExt(basedir=self.getDBDir(), ext="Music-*.p")
         print("Found {0} DB Files".format(len(files)))
         return files
     

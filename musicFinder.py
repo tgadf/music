@@ -1,5 +1,5 @@
 from searchUtils import findDirsPattern, findWalkExt
-from fileUtils import getBaseFilename, getFileBasics
+from fileUtils import getBaseFilename, getFileBasics, getBasename
 from fsUtils import setFile
 from ioUtils import saveFile, getFile
 from timeUtils import clock, elapsed
@@ -20,12 +20,15 @@ class musicFinder(musicBase):
         
     def findMusic(self):
         for idir in self.getMusicDirPaths():
+            if idir.find("Soundtrack") != -1:
+                print("SKIPPING SOUNDTRACKS!!!")
+                continue
             print("Checking {0}...".format(idir), end='   \t')
             files = findWalkExt(basedir=idir, ext=self.musicext)
             print("Found {0} files.".format(len(files)))
             retval = {ifile: self.pb.getPaths(ifile).getDict() for ifile in files}
             print("Processed {0} paths.".format(len(retval)))
-            savename = setFile(self.getDBDir(), "Music-{0}.p".format(idir))
+            savename = setFile(self.getDBDir(), "Music-{0}.p".format(getBasename(idir)))
             saveFile(ifile=savename, idata=retval, debug=True)
             
             
