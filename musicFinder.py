@@ -18,11 +18,16 @@ class musicFinder(musicBase):
         self.pb = pathBasics()
 
         
-    def findMusic(self):
+    def findMusic(self, skips=[]):
         for idir in self.getMusicDirPaths():
-            if idir.find("Soundtrack") != -1:
-                print("SKIPPING SOUNDTRACKS!!!")
+            keep = True
+            for skip in skips:
+                if idir.find(skip) != -1:
+                    print("SKIPPING {0}!!!".format(skip))
+                    keep = False
+            if keep is False:
                 continue
+
             print("Checking {0}...".format(idir), end='   \t')
             files = findWalkExt(basedir=idir, ext=self.musicext)
             print("Found {0} files.".format(len(files)))
