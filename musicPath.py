@@ -27,7 +27,7 @@ class pathBasics(musicBase):
         self.mDisc   = None
         self.mFile   = None
         
-    def stripBase(self, ifile):
+    def stripBase(self, ifile, errors='ignore'):
         mdir = self.getMusicDir()
         if ifile.startswith(mdir) is True:
             ifile = ifile.replace(mdir, "")
@@ -40,7 +40,6 @@ class pathBasics(musicBase):
                 self.mFile = ifile
                 return
                             
-            
             split   = "/iTunes Media/Music/"
             results = ifile.split(split)
             if len(results) == 2:
@@ -63,7 +62,7 @@ class pathBasics(musicBase):
         return
     
         
-    def getPaths(self, ifile):
+    def getPaths(self, ifile, errors='ignore'):
         if self.debug:
             print("Start: {0}".format(ifile))
             print("isFile: {0}".format(isFile(ifile)))
@@ -127,12 +126,15 @@ class pathBasics(musicBase):
                         self.mArtist = artval
                         self.mAlbum  = albval
                         pass
-                    else:                    
+                    else:
                         artval1,artval2 = getDirname(artval),getBasename(artval)                        
                         if not all([artval1,artval2]):
                             raise ValueError("This shouldn't happen: {0}".format(artval))
                         else:
-                            raise ValueError("Not sure what to do with {0}, {1}".format(artval1,artval2))
+                            self.mArtist = artval2
+                            self.mAlbum  = self.mDisc
+                            if errors != 'ignore':
+                                raise ValueError("Not sure what to do with {0}, {1}".format(artval1,artval2))
         else:
             print("Ext: {0}".format(getExt(fval)))
             raise ValueError("Not sure how to parse file: {0}".format(ifile))

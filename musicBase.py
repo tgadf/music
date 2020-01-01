@@ -32,10 +32,12 @@ class musicBase():
             self.online = False
             
         self.musicdirpattern = "iTunes"
-        self.musicext=[".mp3", ".Mp3", ".MP3"]
+        self.musicext=[".mp3", ".Mp3", ".MP3", ".FLAC", ".flac"]
         
 
-        self.musicdirpaths = findDirsPattern(basedir=self.getMusicDir(), pattern=self.musicdirpattern)
+        paths = ["Classical", "Downloads", "Live", "MixTape", "Non Fiction", "ToDo", "Compilation", "Jazz", "Matched", "Not In Discogs", "Soundtracks"]
+        self.musicdirpaths = [setDir(self.getMusicDir(), x) for x in paths]
+        #self.musicdirpaths = findDirsPattern(basedir=self.getMusicDir(), pattern=self.musicdirpattern)
         self.musicClasses  = [getBasename(x) for x in self.musicdirpaths]
         
         if basedir is None:

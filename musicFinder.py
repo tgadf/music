@@ -19,6 +19,7 @@ class musicFinder(musicBase):
 
         
     def findMusic(self, skips=[]):
+        print(self.getMusicDirPaths())
         for idir in self.getMusicDirPaths():
             keep = True
             for skip in skips:
