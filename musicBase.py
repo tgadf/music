@@ -7,6 +7,8 @@ from searchUtils import findDirs, findAll, findNearest
 from fileUtils import getDirBasics, getBaseFilename
 from glob import glob
 from os.path import join
+from pandas import DataFrame, Series
+from collections import Counter
 
 
 
@@ -25,9 +27,18 @@ class myArtistAlbums:
         self.unknown   = {}
         self.random    = {}
         
+        
+        
+        
     def getNum(self, albumType):
         num = sum(len(x) for x in albumType.values())
         return num
+    
+
+    def getNumVolumes(self):
+        oaa = self.getOrganizedAlbums()
+        volumes = {volume: sum([len(y) for y in x.values()]) for volume, x in oaa.items()}
+        return volumes
 
     
     def setUnmatched(self, unmatched):
@@ -101,6 +112,15 @@ class myArtistAlbums:
     def getOrganizedAlbums(self):
         self.organize()
         return self.dirvals
+        
+
+    def getDict(self):
+        retval = {"Unmatched": self.getNumUnmatched(),
+                  "Matched":   self.getNumMatched(),
+                  "Todo":      self.getNumTodo(),
+                  "Unknown":   self.getNumUnknown(),
+                  "Random":    self.getNumRandom()}
+        return retval
     
         
     def info(self):
@@ -247,6 +267,24 @@ class myMusicBase:
 
     def getArtistAlbumsByArtist(self, artistName):
         return self.artistAlbums.get(artistName)
+        
+
+    def getDictByArtist(self, artistName):
+        mma = self.getArtistAlbumsByArtist(artistName)
+        if mma is not None:
+            return mma.getDict()
+        return {}
+    
+    
+    def getDataFrame(self):
+        tmp    = {artistName: artistData.getDict() for artistName, artistData in self.getArtistAlbums().items()}
+        df     = DataFrame(tmp).T
+        dirval = Series(df.index).apply(self.getPrimeDirectory)
+        dirval.index = df.index
+        df["Prime"] = dirval
+        return df
+    def getDF(self):
+        return self.getDataFrame()
 
 
     
@@ -296,3 +334,61 @@ class myMusicBase:
                 self.artistAlbums[artistName] = maa
                 
         elapsed(start, cmt)
+        
+        
+    def show(self):
+        minMyAlbums   = 2
+        minTodoAlbums = 5
+        downloadCut   = 5
+
+        ranks = {"Matches": Counter(), "Albums": Counter()}
+
+        print("{0: <35}| {1: <10}| {2: <10}| {3: <10}| {4: <10}| {5: <10}| {6: <10}| {7: <12}| {8: <12}|".format("Artist", "Volumes", "Matches", "# Albums", "Todo", "Unknown", "Random", "No Match", "Many Albums"))
+        print("{0: <35}| {1: <10}| {2: <10}| {3: <10}| {4: <10}| {5: <10}| {6: <10}| {7: <12}| {8: <12}|".format("------", "-------", "-------", "--------", "----", "-------", "------", "--------", "-----------"))
+
+        for artistName, artistData in self.mmb.getArtistAlbums().items():
+            
+            ### Artist Name
+            print("{0: <35}".format(artistName), end="")
+
+            ### Volumes
+            oaa     = artistData.getOrganizedAlbums()
+            volumes = {volume: sum([len(y) for y in x.values()]) for volume, x in oaa.items()}
+            print("| {0: <10}".format(self.printAlbums(volumes.values())), end="")
+
+            ### Matched Albums
+            numMatched = artistData.getNumMatched()
+            print("| {0: <10}".format(numMatched), end="")
+
+            ### Unmatched Albums
+            numUnmatched = artistData.getNumUnmatched()
+            print("| {0: <10}".format(numUnmatched), end="")
+
+            ### Todo Albums
+            numTodo = artistData.getNumTodo()
+            print("| {0: <10}".format(numTodo), end="")
+
+            ### Unknown Albums
+            numUnknown = artistData.getNumUnknown()
+            print("| {0: <10}".format(numUnknown), end="")
+
+            ### Random Albums
+            numRandom = artistData.getNumRandom()
+            print("| {0: <10}".format(numRandom), end="")
+
+            
+            ### Check For No Match
+            noMatchText = "{0}..".format(artistName[:9])
+            if numMatched > 0:
+                noMatchText = ""
+            print("| {0: <12}".format(noMatchText), end="")
+
+            
+            ### Check For Many Albums
+            manyAlbumsText = "{0}..".format(artistName[:9])
+            if numUnmatched < 3:
+                manyAlbumsText = ""
+            print("| {0: <12}".format(manyAlbumsText), end="")
+
+            ### Return
+            print("|")

@@ -2,8 +2,8 @@ from difflib import SequenceMatcher
 from searchUtils import findNearest
 
 class matchAlbums():
-    def __init__(self, n=1, cutoff=0.7):
-        self.name   = "MatchAlbums"
+    def __init__(self, name="Dummy", n=1, cutoff=0.7):
+        self.name      = name
         self.minAlbums = n
         self.cutoff    = cutoff
 
@@ -44,12 +44,21 @@ class matchAlbums():
     def match(self, albums1, albums2, debug=False):
         if debug:
             print("\tFinding Best Matches of [{0}] and [{1}] Album Lists".format(len(albums1), len(albums2)))
+            
+        if albums1 is None:
+            raise ValueError("1st set of albums is NULL! for {0}".format(self.name))
+        if albums2 is None:
+            raise ValueError("2nd set of albums is NULL! for {0}".format(self.name))
+
 
         albums2map = None
         if isinstance(albums2, dict):
             albums2map = {v: k for k, v in albums2.items()}
-        albums2 = list(albums2.values())
-            
+            albums2 = list(albums2.values())
+        elif isinstance(albums2, list):
+            pass
+        else:
+            raise ValueError("Albums to match type of [{0}] is unknown".format(type(albums2)))
             
         self.exact   = len(set(albums1).intersection(set(albums2)))
         self.near    = 0
