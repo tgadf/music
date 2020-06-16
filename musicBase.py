@@ -136,12 +136,13 @@ class myArtistAlbums:
 class myMusicBase:
     def __init__(self, debug=False):
         self.debug     = debug
-        self.musicDirs = ["/Volumes/Music/Matched", "/Volumes/Biggy/Matched"]
+        #self.musicDirs = ["/Volumes/Music/Matched", "/Volumes/Biggy/Matched"]
+        self.musicDirs = ["/Volumes/Piggy/Music/Matched"]
         self.musicDirs = [x for x in self.musicDirs if isDir(x)]
         
         
         ### My Music Directory Names
-        self.unknownDirs = ['Unknown', 'Bootleg', 'Mix']
+        self.unknownDirs = ['Unknown', 'Bootleg', 'Mix', 'BoxSet', 'Media']
         self.randomDirs  = ['Random']
         self.todoDirs    = ["Todo", "Album", "Title"]
         self.matchDir    = "Match"
@@ -293,7 +294,10 @@ class myMusicBase:
         
         self.artistAlbums = {}
         for primeDir in self.getPrimeDirectories():
-            for artistName, artistPrimeDirs in self.getArtistPrimeDirMap(primeDir).items():
+            if self.debug:
+                startPrime, cmtPrime = clock("=====> {0}".format(primeDir))
+            artistPrimeDirItems = self.getArtistPrimeDirMap(primeDir)
+            for artistName, artistPrimeDirs in artistPrimeDirItems.items():
                 maa = myArtistAlbums(artistName, artistPrimeDirs)
 
                 ######################################################################
@@ -332,6 +336,10 @@ class myMusicBase:
                 
                 
                 self.artistAlbums[artistName] = maa
+                
+            if self.debug:
+                elapsed(startPrime, cmtPrime)
+                print("")
                 
         elapsed(start, cmt)
         
