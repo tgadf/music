@@ -173,3 +173,63 @@ class matchMyMusic:
         print("Found {0} music <-> discogs albums maps".format(len(self.matchedAlbums)))
         
 
+    def matchUnknownArtists(self, albumType=1, ratioCut=0.95):
+        unknownArtists = self.getUnknownArtists()
+        for unknownArtist in unknownArtists.keys():
+            #print("===>",unknownArtist)
+            retval = self.matchUnknownArtist(unknownArtist, albumType, ratioCut)
+
+            for db,dbdata in retval.items():
+                bestMatch = {"ID": None, "Matches": 0, "Score": 0.0}
+                for artistDBID,artistDBData in dbdata.items():
+                    for mediaType,ma in artistDBData.items():
+                        if ma.near == 0:
+                            continue
+                        if ma.near > bestMatch["Matches"]:
+                            bestMatch = {"ID": artistDBID, "Matches": ma.near, "Score": ma.score}
+                        elif ma.near == bestMatch["Matches"]:
+                            if ma.score > bestMatch["Score"]:
+                                bestMatch = {"ID": artistDBID, "Matches": ma.near, "Score": ma.score}
+
+                if bestMatch["ID"] is not None:
+                    print("mdb.add(\"{0}\", \"{1}\", \"{2}\")".format(unknownArtist, db, bestMatch["ID"]))
+            
+            
+    def matchUnknownArtist(self, unknownArtist, albumType=1, ratioCut=0.95):
+        ######################################################################
+        #### Get Unknown Artist Albums and Potential DB Artists
+        ######################################################################
+        unMatchedAlbums = self.mmb.getUnMatchedAlbumsByArtist(unknownArtist)
+        artistNameDBIDs = self.mdb.getArtistIDs(unknownArtist)
+        
+        #print(unknownArtist)
+        #print(unMatchedAlbums)
+        #print(artistNameDBIDs)
+        #return
+
+        
+        ######################################################################
+        #### Get Database Albums
+        ######################################################################
+        matches = {}
+        for db,artistDBartists in artistNameDBIDs.items():
+            
+            dbMatches = {}
+            for artistDBartist,artistDBIDs in artistDBartists.items():
+                for artistDBID in artistDBIDs:
+                    dbMatches[artistDBID] = {}
+                    artistDBAlbumsFromID = mdb.getArtistAlbumsFromID(db, artistDBID)
+
+                    for mediaType, mediaTypeAlbums in artistDBAlbumsFromID.items():
+                        if mediaType not in mdb.getDBAlbumTypeNames(db, albumType):
+                            continue
+
+                        ma = matchAlbums(cutoff=ratioCut)
+                        ma.match(unMatchedAlbums, mediaTypeAlbums)
+                        #ma.show(debug=True)
+                        
+                        dbMatches[artistDBID][mediaType] = ma
+                        
+            matches[db] = dbMatches
+            
+        return matches

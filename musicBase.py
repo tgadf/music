@@ -7,187 +7,315 @@ from searchUtils import findDirs, findAll, findNearest
 from fileUtils import getDirBasics, getBaseFilename
 from glob import glob
 from os.path import join
+from os import walk
 from pandas import DataFrame, Series
 from collections import Counter
+from primeDirectory import primeDirectory
 
 
 
-class myArtistAlbums:
-    def __init__(self, artistName, primeDirs, debug=False):
-        self.debug=debug
-        self.artistName = artistName
+###############################################################################################################################
+#
+# My Artist Album Type
+#
+###############################################################################################################################
+class myArtistAlbumType:
+    def __init__(self, debug=False):
+        self.albums = {}
+        self.fcounts = None
         
-        self.primeDirs = primeDirs
-        
-        self.dirvals   = {}
-        
-        self.unmatched = {}
-        self.matched   = {}
-        self.todo      = {}
-        self.unknown   = {}
-        self.random    = {}
-        
-        
-        
-        
-    def getNum(self, albumType):
-        num = sum(len(x) for x in albumType.values())
+    def getNum(self):
+        num = sum(len(x) for x in self.albums.values())
         return num
     
+    def setFileCounts(self, fcounts):
+        self.fcounts = fcounts
 
-    def getNumVolumes(self):
-        oaa = self.getOrganizedAlbums()
-        volumes = {volume: sum([len(y) for y in x.values()]) for volume, x in oaa.items()}
-        return volumes
-
+    def setAlbums(self, albums):
+        self.albums = albums
+        
+    def getAlbums(self):
+        return self.albums
     
-    def setUnmatched(self, unmatched):
-        self.unmatched = unmatched
-    def getUnmatched(self):
-        return self.unmatched
-    def getNumUnmatched(self):
-        return self.getNum(self.unmatched)
+    def getNumAlbums(self):
+        return self.getNum()
     
-
-    def setMatched(self, matched):
-        self.matched = matched
-    def getMatched(self):
-        return self.matched
-    def getNumMatched(self):
-        return self.getNum(self.matched)
+    def getNumFiles(self):
+        if self.fcounts is None:
+            return 0
+        else:
+            num = sum([x for x in self.fcounts.values() if x is not None])
+            return num
     
 
-    def setTodo(self, todo):
-        self.todo = todo
-    def getTodo(self):
-        return self.todo
-    def getNumTodo(self):
-        return self.getNum(self.todo)
-
-
-    def setUnknown(self, unknown):
-        self.unknown = unknown
-    def getUnknown(self):
-        return self.unknown
-    def getNumUnknown(self):
-        return self.getNum(self.unknown)
-
-
-    def setRandom(self, random):
-        self.random = random
-    def getRandom(self):
-        return self.random
-    def getNumRandom(self):
-        return self.getNum(self.random)
-
-        
-    def organize(self):
-        self.dirvals = {}
-        for dirval,albums in self.unmatched.items():
-            if self.dirvals.get(dirval) is None:
-                self.dirvals[dirval] = {}
-            self.dirvals[dirval]["Unmatched"] = albums
-        
-        for dirval,albums in self.matched.items():
-            if self.dirvals.get(dirval) is None:
-                self.dirvals[dirval] = {}
-            self.dirvals[dirval]["Matched"] = albums
-        
-        for dirval,albums in self.todo.items():
-            if self.dirvals.get(dirval) is None:
-                self.dirvals[dirval] = {}
-            self.dirvals[dirval]["Todo"] = albums
-        
-        for dirval,albums in self.unknown.items():
-            if self.dirvals.get(dirval) is None:
-                self.dirvals[dirval] = {}
-            self.dirvals[dirval]["Unknown"] = albums
-        
-        for dirval,albums in self.random.items():
-            if self.dirvals.get(dirval) is None:
-                self.dirvals[dirval] = {}
-            self.dirvals[dirval]["Random"] = albums
-            
-            
-    def getOrganizedAlbums(self):
-        self.organize()
-        return self.dirvals
-        
-
-    def getDict(self):
-        retval = {"Unmatched": self.getNumUnmatched(),
-                  "Matched":   self.getNumMatched(),
-                  "Todo":      self.getNumTodo(),
-                  "Unknown":   self.getNumUnknown(),
-                  "Random":    self.getNumRandom()}
-        return retval
     
-        
-    def info(self):
-        print("Artist Albums For {0}".format(self.artistName))
-        print("  Unmatched: {0}".format(self.unmatched))
-        print("  Matched:   {0}".format(self.matched))
-        print("  Todo:      {0}".format(self.todo))
-        print("  Unknown:   {0}".format(self.unknown))
-        print("  Random:    {0}".format(self.random))
-
-        
-
-class myMusicBase:
+    
+###############################################################################################################################
+#
+# My Artist Albums
+#
+###############################################################################################################################
+class myArtistAlbumData:
     def __init__(self, debug=False):
+        self.albums = []
+        self.counts = None
+        
+class myArtistAlbums(primeDirectory):
+    def __init__(self, artistName, count=False, debug=False):
+        super().__init__()
+        self.artistName       = artistName        
+        self.count            = count
+        self.debug            = debug
+        
+        self.directoryMapping = {}
+        self.directoryMapping["BoxSet"]  = ["BoxSet"]
+        self.directoryMapping["Bootleg"] = ["Bootleg"]
+        self.directoryMapping["Mix"]     = ["Mix"]
+        self.directoryMapping["Media"]   = ["Media"]
+        self.directoryMapping["Unknown"] = ['Unknown']
+        self.directoryMapping["Random"]  = ['Random']
+        self.directoryMapping["Todo"]    = ["Todo", "Album", "Title"]
+        self.directoryMapping["Match"]   = ["Match"]
+        
+        ## This one is special
+        self.directoryMapping["UnMatched"] = []
+        
+        self.albumTypeData = {}
+        self.myMusicDirs   = []
+        for albumType in self.directoryMapping.keys():
+            self.albumTypeData[albumType] = myArtistAlbumType()
+            self.myMusicDirs += self.directoryMapping[albumType]
+            
+            
+
+    ################################################################################################
+    # Produce Dictionary of Results
+    ###############################################################################################
+    def getDict(self):
+        if self.count is True:
+            retval = {k: [v.getNumAlbums(),v.getNumFiles()] for k,v in self.albumTypeData.items()}
+        else:
+            retval = {k: v.getNumAlbums() for k,v in self.albumTypeData.items()}            
+        return retval
+                
+        
+    ################################################################################################
+    # Album Setter
+    ################################################################################################
+    def setAlbumData(self, albumType, albumTypeResults):
+        if self.albumTypeData.get(albumType) is None:
+            raise ValueError("Trying to set albumType [{0}], but it's not allowed!".format(dirval))
+        albums = {dirval: dirResults.albums for dirval,dirResults in albumTypeResults.items()}
+        self.albumTypeData[albumType].setAlbums(albums)
+        if self.count is True:
+            counts = {dirval: dirResults.counts for dirval,dirResults in albumTypeResults.items()}
+            self.albumTypeData[albumType].setFileCounts(counts)
+        else:
+            self.albumTypeData[albumType].setFileCounts(None)
+            
+        
+    def updateFileCount(self, musicdata, dname):
+        if self.count is True:
+            for root, dirs, files in walk(dname):
+                if musicdata.counts is None:
+                    musicdata.counts = 0
+                musicdata.counts += len(files)
+            
+            
+    ################################################################################################
+    # Unmatched
+    ################################################################################################
+    def getMyUnmatchedAlbums(self, dirval, returnNames=False):    
+        musicdata = myArtistAlbumData()
+        musicdata.albums = [x for x in findDirs(dirval) if getDirBasics(x)[-1] not in self.myMusicDirs]
+        for dname in musicdata.albums:
+            self.updateFileCount(musicdata, dname)
+        if returnNames is True:
+            musicdata.albums = [getDirBasics(x)[-1] for x in musicdata.albums]
+        return musicdata
+
+
+    ################################################################################################
+    # Matched
+    ################################################################################################
+    def getMyMatchedMusicAlbums(self, dirval):
+        musicdata = myArtistAlbumData()
+        for matchDir in self.directoryMapping["Match"]:
+            matchval = join(dirval, matchDir, "*")
+            for dname in glob(matchval):
+                musicdata.albums += [getDirBasics(x)[-1].split(" :: ")[0] for x in findDirs(dname)]
+                self.updateFileCount(musicdata, dname)
+        return musicdata
+
+
+    ################################################################################################
+    # Todo
+    ################################################################################################
+    def getMyTodoMusicAlbums(self, dirval):
+        musicdata = myArtistAlbumData()
+        for dval in self.directoryMapping["Todo"]:
+            todoval = join(dirval, dval)
+            for dname in glob(todoval):
+                musicdata.albums += [getDirBasics(x)[-1] for x in findDirs(dname)]
+                self.updateFileCount(musicdata, dname)
+        return musicdata
+
+
+    ################################################################################################
+    # Unknown
+    ################################################################################################
+    def getMyUnknownMusicAlbums(self, dirval):
+        musicdata = myArtistAlbumData()
+        for dval in self.directoryMapping["Unknown"]:
+            todoval = join(dirval, dval)
+            for dname in glob(todoval):
+                musicdata.albums += [getDirBasics(x)[-1] for x in findDirs(dname)]
+                self.updateFileCount(musicdata, dname)
+        return musicdata
+
+
+    ################################################################################################
+    # Random
+    ################################################################################################
+    def getMyRandomMusic(self, dirval):
+        musicdata = myArtistAlbumData()
+        for dval in self.directoryMapping["Random"]:
+            todoval = join(dirval, dval)
+            for dname in glob(todoval):
+                musicdata.albums += [getBaseFilename(x) for x in findAll(dname)]
+                self.updateFileCount(musicdata, dname)
+        return musicdata
+
+
+    ################################################################################################
+    # Mix
+    ################################################################################################
+    def getMyMixMusic(self, dirval):
+        musicdata = myArtistAlbumData()
+        for dval in self.directoryMapping["Mix"]:
+            mixval = join(dirval, dval)
+            for dname in glob(mixval):
+                musicdata.albums += [getBaseFilename(x) for x in findAll(dname)]
+                self.updateFileCount(musicdata, dname)
+        return musicdata
+
+
+    ################################################################################################
+    # Media
+    ################################################################################################
+    def getMyMediaMusic(self, dirval):
+        musicdata = myArtistAlbumData()
+        for dval in self.directoryMapping["Media"]:
+            mediaval = join(dirval, dval)
+            for dname in glob(mediaval):
+                musicdata.albums += [getBaseFilename(x) for x in findAll(dname)]
+                self.updateFileCount(musicdata, dname)
+        return musicdata
+
+
+    ################################################################################################
+    # Bootleg
+    ################################################################################################
+    def getMyBootlegMusic(self, dirval):
+        musicdata = myArtistAlbumData()
+        for dval in self.directoryMapping["Bootleg"]:
+            bootlegval = join(dirval, dval)
+            for dname in glob(bootlegval):
+                musicdata.albums += [getBaseFilename(x) for x in findAll(dname)]
+                self.updateFileCount(musicdata, dname)
+        return musicdata
+
+
+    ################################################################################################
+    # BotXset
+    ################################################################################################
+    def getMyBoxSetMusic(self, dirval):
+        musicdata = myArtistAlbumData()
+        for dval in self.directoryMapping["BoxSet"]:
+            boxsetval = join(dirval, dval)
+            for dname in glob(boxsetval):
+                musicdata.albums += [getBaseFilename(x) for x in findAll(dname)]
+                self.updateFileCount(musicdata, dname)
+        return musicdata
+    
+        
+
+    
+###############################################################################################################################
+#
+# My Music Base
+#
+###############################################################################################################################
+class myMusicBase(primeDirectory):
+    def __init__(self, debug=False):
+        super().__init__()
         self.debug     = debug
-        #self.musicDirs = ["/Volumes/Music/Matched", "/Volumes/Biggy/Matched"]
+            
         self.musicDirs = ["/Volumes/Piggy/Music/Matched"]
         self.musicDirs = [x for x in self.musicDirs if isDir(x)]
-        
+        print("My Music Base: {0}".format(self.musicDirs))
         
         ### My Music Directory Names
-        self.unknownDirs = ['Unknown', 'Bootleg', 'Mix', 'BoxSet', 'Media']
-        self.randomDirs  = ['Random']
-        self.todoDirs    = ["Todo", "Album", "Title"]
-        self.matchDir    = "Match"
-        self.myMusicDirs = list(set(self.unknownDirs + self.randomDirs + self.todoDirs + [self.matchDir]))
-
-        self.artistAlbums = {}
+        self.artistFileCount   = {}
+        self.artistAlbums      = {}
         self.artistPrimeDirMap = {}
-        
-        self.matchedDirs = self.getMatchedDirs()
-        print("My Music Base: {0}".format(self.musicDirs))
 
     
     def getMatchedDirs(self):
         return self.musicDirs
-    
-
-    def getPrimeDirectory(self, artistName):
-        start = artistName[0]
-
-        if start in string.ascii_uppercase:
-            if artistName.startswith("The "):
-                return "The"
-            return start
-        if start in string.ascii_lowercase:
-            return "Xtra"
-        elif start in string.digits:
-            return "Num"
-        else:
-            return "Xtra"
-            raise ValueError("Could not determine Prime Directory for Artist {0}".format(artistName))
-
-            
-    def getPrimeDirectories(self):    
-        retvals  = [x for x in string.ascii_uppercase]
-        retvals += ["Num", "Xtra", "The"]
-        retvals  = sorted(retvals)
-        return retvals
-
 
     def getVolumeName(self, baseDir):
         vals = getDirBasics(baseDir)
-        return vals[2]
-    
-    
+        return vals[2] 
 
+
+    
+    ###################################################################################################
+    # Return Data
+    ###################################################################################################
+    def getArtists(self):
+        return list(self.artistAlbums.keys())
+        
+    def getArtistAlbums(self):
+        return self.artistAlbums
+    
+    def getUnMatchedAlbumsByArtist(self, artistName):
+        return self.getArtistAlbumTypesByArtist(artistName, "UnMatched")
+    
+    def getArtistAlbumTypesByArtist(self, artistName, albumType):
+        artistData = self.getArtistAlbumsByArtist(artistName)
+        if artistData.get(albumType):
+            albums = artistData[albumType].albums.values()
+            return getFlatList(albums)
+        return None
+
+    def getArtistAlbumsByArtist(self, artistName):
+        artistData = self.artistAlbums.get(artistName)
+        if artistData is not None:
+            return artistData.albumTypeData
+        return {}
+
+    def getDictByArtist(self, artistName):
+        mma = self.getArtistAlbumsByArtist(artistName)
+        if mma is not None:
+            return mma.getDict()
+        return {}
+    
+    def getDataFrame(self):
+        tmp    = {artistName: artistData.getDict() for artistName, artistData in self.getArtistAlbums().items()}
+        df     = DataFrame(tmp).T
+        df["Files"] = self.artistFileCount.values()
+        dirval = Series(df.index).apply(self.getPrimeDirectory)
+        dirval.index = df.index
+        df["Prime"] = dirval
+        return df
+    
+    def getDF(self):
+        return self.getDataFrame()
+    
+    
+    
+    
     ###################################################################################################
     # Loop over Prime Directories
     ###################################################################################################
@@ -211,192 +339,99 @@ class myMusicBase:
         return self.artistPrimeDirMap
     
     
-    
     ###################################################################################################
-    # My Music Directories
+    # Find Artist Albums and Organize
     ###################################################################################################    
-    def getMyUnmatchedAlbums(self, dirval, returnNames=False):    
-        myMusicAlbums = [x for x in findDirs(dirval) if getDirBasics(x)[-1] not in self.myMusicDirs]
-        if returnNames is True:
-            myMusicUnmatched = [getDirBasics(x)[-1] for x in myMusicAlbums]
-        return myMusicUnmatched
-
-
-    def getMyMatchedMusicAlbums(self, dirval, byKey=False):  
-        matchval = join(dirval, self.matchDir, "*")
-        matchedAlbums = []
-        for dname in glob(matchval):
-            matchedAlbums += [getDirBasics(x)[-1].split(" :: ")[0] for x in findDirs(dname)]
-        return matchedAlbums
-
-
-    def getMyTodoMusicAlbums(self, dirval):
-        todoAlbums = []
-        for dval in self.todoDirs:
-            todoval = join(dirval, dval)
-            for dname in glob(todoval):
-                todoAlbums += [getDirBasics(x)[-1] for x in findDirs(dname)]
-        return todoAlbums
-
-
-    def getMyUnknownMusicAlbums(self, dirval):
-        todoAlbums = []
-        for dval in self.unknownDirs:
-            todoval = join(dirval, dval)
-            for dname in glob(todoval):
-                todoAlbums += [getDirBasics(x)[-1] for x in findDirs(dname)]
-        return todoAlbums
-
-
-    def getMyRandomMusic(self, dirval):
-        randomMusic = []
-        for dval in self.randomDirs:
-            todoval = join(dirval, dval)
-            for dname in glob(todoval):
-                randomMusic += [getBaseFilename(x) for x in findAll(dname)]
-        return randomMusic
-
-
-    
-    def getArtists(self):
-        return list(self.artistAlbums.keys())
-    
-    
-    def getArtistAlbums(self):
-        return self.artistAlbums
-
-
-    def getArtistAlbumsByArtist(self, artistName):
-        return self.artistAlbums.get(artistName)
-        
-
-    def getDictByArtist(self, artistName):
-        mma = self.getArtistAlbumsByArtist(artistName)
-        if mma is not None:
-            return mma.getDict()
-        return {}
-    
-    
-    def getDataFrame(self):
-        tmp    = {artistName: artistData.getDict() for artistName, artistData in self.getArtistAlbums().items()}
-        df     = DataFrame(tmp).T
-        dirval = Series(df.index).apply(self.getPrimeDirectory)
-        dirval.index = df.index
-        df["Prime"] = dirval
-        return df
-    def getDF(self):
-        return self.getDataFrame()
-
-
-    
-    def findArtistAlbums(self):
+    def findArtistAlbums(self, count=False):
         start, cmt = clock("Finding All Artist Albums")
         
-        self.artistAlbums = {}
+        self.artistAlbums    = {}
+        self.artistFileCount = {}
         for primeDir in self.getPrimeDirectories():
             if self.debug:
                 startPrime, cmtPrime = clock("=====> {0}".format(primeDir))
             artistPrimeDirItems = self.getArtistPrimeDirMap(primeDir)
             for artistName, artistPrimeDirs in artistPrimeDirItems.items():
-                maa = myArtistAlbums(artistName, artistPrimeDirs)
-
-                ######################################################################
-                #### Get My Music Albums
-                ######################################################################
-                myUnmatchedAlbums = {dirval: self.getMyUnmatchedAlbums(dirval, returnNames=True) for dirval in artistPrimeDirs}
-                maa.setUnmatched(myUnmatchedAlbums)
+                maa = myArtistAlbums(artistName=artistName, count=count)
 
 
                 ######################################################################
                 #### Get My Matched Albums
                 ######################################################################
-                myMatchedAlbums = {dirval: self.getMyMatchedMusicAlbums(dirval) for dirval in artistPrimeDirs}
-                maa.setMatched(myMatchedAlbums)
+                albums = {dirval: maa.getMyMatchedMusicAlbums(dirval) for dirval in artistPrimeDirs}
+                maa.setAlbumData("Match", albums)
+
+
+                ######################################################################
+                #### Get My UnMatched Albums
+                ######################################################################
+                albums = {dirval: maa.getMyUnmatchedAlbums(dirval, returnNames=True) for dirval in artistPrimeDirs}
+                maa.setAlbumData("UnMatched", albums)
 
 
                 ######################################################################
                 #### Get My Unknown Albums
                 ######################################################################
-                myUnknownAlbums = {dirval: self.getMyUnknownMusicAlbums(dirval) for dirval in artistPrimeDirs}
-                maa.setUnknown(myUnknownAlbums)
+                albums = {dirval: maa.getMyUnknownMusicAlbums(dirval) for dirval in artistPrimeDirs}
+                maa.setAlbumData("Unknown", albums)
 
 
                 ######################################################################
                 #### Get My Todo Albums
                 ######################################################################
-                myTodoAlbums = {dirval: self.getMyTodoMusicAlbums(dirval) for dirval in artistPrimeDirs}
-                maa.setTodo(myTodoAlbums)
+                albums = {dirval: maa.getMyTodoMusicAlbums(dirval) for dirval in artistPrimeDirs}
+                maa.setAlbumData("Todo", albums)
 
 
                 ######################################################################
                 #### Get My Random Music
                 ######################################################################
-                myRandomMusic = {dirval: self.getMyRandomMusic(dirval) for dirval in artistPrimeDirs}
-                maa.setRandom(myRandomMusic)
+                albums = {dirval: maa.getMyRandomMusic(dirval) for dirval in artistPrimeDirs}
+                maa.setAlbumData("Random", albums)
+
+
+                ######################################################################
+                #### Get My Mix Music
+                ######################################################################
+                albums = {dirval: maa.getMyMixMusic(dirval) for dirval in artistPrimeDirs}
+                maa.setAlbumData("Mix", albums)
+
+
+                ######################################################################
+                #### Get My Media Music
+                ######################################################################
+                albums = {dirval: maa.getMyMediaMusic(dirval) for dirval in artistPrimeDirs}
+                maa.setAlbumData("Media", albums)
+
+
+                ######################################################################
+                #### Get My Bootleg Music
+                ######################################################################
+                albums = {dirval: maa.getMyBootlegMusic(dirval) for dirval in artistPrimeDirs}
+                maa.setAlbumData("Bootleg", albums)
+
+
+                ######################################################################
+                #### Get My BoxSet Music
+                ######################################################################
+                albums = {dirval: maa.getMyBoxSetMusic(dirval) for dirval in artistPrimeDirs}
+                maa.setAlbumData("BoxSet", albums)
                 
                 
-                self.artistAlbums[artistName] = maa
+                ######################################################################
+                #### Save Artist Albums
+                ######################################################################
+                self.artistAlbums[artistName]    = maa
+                self.artistFileCount[artistName] = None
+                if count is True:
+                    self.artistFileCount[artistName] = 0
+                    for artistPrimeDir in artistPrimeDirs:
+                        for root, dirs, files in walk(artistPrimeDir):
+                            self.artistFileCount[artistName] += len(files)
                 
+            #break # (call this if you only want to do the A directories 
             if self.debug:
                 elapsed(startPrime, cmtPrime)
                 print("")
                 
         elapsed(start, cmt)
-        
-        
-    def show(self):
-        minMyAlbums   = 2
-        minTodoAlbums = 5
-        downloadCut   = 5
-
-        ranks = {"Matches": Counter(), "Albums": Counter()}
-
-        print("{0: <35}| {1: <10}| {2: <10}| {3: <10}| {4: <10}| {5: <10}| {6: <10}| {7: <12}| {8: <12}|".format("Artist", "Volumes", "Matches", "# Albums", "Todo", "Unknown", "Random", "No Match", "Many Albums"))
-        print("{0: <35}| {1: <10}| {2: <10}| {3: <10}| {4: <10}| {5: <10}| {6: <10}| {7: <12}| {8: <12}|".format("------", "-------", "-------", "--------", "----", "-------", "------", "--------", "-----------"))
-
-        for artistName, artistData in self.mmb.getArtistAlbums().items():
-            
-            ### Artist Name
-            print("{0: <35}".format(artistName), end="")
-
-            ### Volumes
-            oaa     = artistData.getOrganizedAlbums()
-            volumes = {volume: sum([len(y) for y in x.values()]) for volume, x in oaa.items()}
-            print("| {0: <10}".format(self.printAlbums(volumes.values())), end="")
-
-            ### Matched Albums
-            numMatched = artistData.getNumMatched()
-            print("| {0: <10}".format(numMatched), end="")
-
-            ### Unmatched Albums
-            numUnmatched = artistData.getNumUnmatched()
-            print("| {0: <10}".format(numUnmatched), end="")
-
-            ### Todo Albums
-            numTodo = artistData.getNumTodo()
-            print("| {0: <10}".format(numTodo), end="")
-
-            ### Unknown Albums
-            numUnknown = artistData.getNumUnknown()
-            print("| {0: <10}".format(numUnknown), end="")
-
-            ### Random Albums
-            numRandom = artistData.getNumRandom()
-            print("| {0: <10}".format(numRandom), end="")
-
-            
-            ### Check For No Match
-            noMatchText = "{0}..".format(artistName[:9])
-            if numMatched > 0:
-                noMatchText = ""
-            print("| {0: <12}".format(noMatchText), end="")
-
-            
-            ### Check For Many Albums
-            manyAlbumsText = "{0}..".format(artistName[:9])
-            if numUnmatched < 3:
-                manyAlbumsText = ""
-            print("| {0: <12}".format(manyAlbumsText), end="")
-
-            ### Return
-            print("|")
