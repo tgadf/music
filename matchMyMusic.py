@@ -176,7 +176,7 @@ class matchMyMusic:
     def matchUnknownArtists(self, albumType=1, ratioCut=0.95):
         unknownArtists = self.getUnknownArtists()
         for unknownArtist in unknownArtists.keys():
-            #print("===>",unknownArtist)
+            print("# ===>",unknownArtist)
             retval = self.matchUnknownArtist(unknownArtist, albumType, ratioCut)
 
             for db,dbdata in retval.items():
@@ -218,10 +218,10 @@ class matchMyMusic:
             for artistDBartist,artistDBIDs in artistDBartists.items():
                 for artistDBID in artistDBIDs:
                     dbMatches[artistDBID] = {}
-                    artistDBAlbumsFromID = mdb.getArtistAlbumsFromID(db, artistDBID)
+                    artistDBAlbumsFromID = self.mdb.getArtistAlbumsFromID(db, artistDBID)
 
                     for mediaType, mediaTypeAlbums in artistDBAlbumsFromID.items():
-                        if mediaType not in mdb.getDBAlbumTypeNames(db, albumType):
+                        if mediaType not in self.mdb.getDBAlbumTypeNames(db, albumType):
                             continue
 
                         ma = matchAlbums(cutoff=ratioCut)
@@ -233,3 +233,18 @@ class matchMyMusic:
             matches[db] = dbMatches
             
         return matches
+    
+    def manuallyMatchUnknownArtist(self, unknownArtist):
+        ######################################################################
+        #### Get Unknown Artist Albums and Potential DB Artists
+        ######################################################################
+        unMatchedAlbums = self.mmb.getUnMatchedAlbumsByArtist(unknownArtist)
+        artistNameDBIDs = self.mdb.getArtistIDs(unknownArtist)
+        
+        print("Unknown Artist:   {0}".format(unknownArtist))
+        print("UnMatched Albums: {0}".format(", ".join(unMatchedAlbums)))
+        print("="*50)
+        print(artistNameDBIDs)
+
+
+        
