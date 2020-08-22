@@ -70,11 +70,12 @@ class myArtistAlbums(primeDirectory):
         self.directoryMapping = {}
         self.directoryMapping["BoxSet"]  = ["BoxSet"]
         self.directoryMapping["Bootleg"] = ["Bootleg"]
-        self.directoryMapping["Mix"]     = ["Mix"]
+        self.directoryMapping["Mix"]     = ["Mix", "MixTape"]
         self.directoryMapping["Media"]   = ["Media"]
         self.directoryMapping["Unknown"] = ['Unknown']
         self.directoryMapping["Random"]  = ['Random']
-        self.directoryMapping["Todo"]    = ["Todo", "Album", "Title"]
+        self.directoryMapping["Todo"]    = ["Todo"]
+        self.directoryMapping["Rename"]  = ["Album", "Title"]
         self.directoryMapping["Match"]   = ["Match"]
         
         ## This one is special
@@ -201,6 +202,19 @@ class myArtistAlbums(primeDirectory):
 
 
     ################################################################################################
+    # Rename
+    ################################################################################################
+    def getMyRenameMusic(self, dirval):
+        musicdata = myArtistAlbumData()
+        for dval in self.directoryMapping["Rename"]:
+            renameval = join(dirval, dval)
+            for dname in glob(renameval):
+                musicdata.albums += [getBaseFilename(x) for x in findAll(dname)]
+                self.updateFileCount(musicdata, dname)
+        return musicdata
+
+
+    ################################################################################################
     # Media
     ################################################################################################
     def getMyMediaMusic(self, dirval):
@@ -273,6 +287,17 @@ class myMusicBase(primeDirectory):
     ###################################################################################################
     # Return Data
     ###################################################################################################
+    def getArtistMusicDir(self, artistName):
+        primeDirs = [setDir(musicDir, self.getPrimeDirectory(artistName)) for musicDir in self.musicDirs]
+        artistMusicDirs = [setDir(primeDir, artistName) for primeDir in primeDirs]
+        artistMusicDirs = [x for x in artistMusicDirs if isDir(x)]
+        if len(artistMusicDirs) > 1:
+            raise ValueError("Found more than one artist music directories...")
+        elif len(artistMusicDirs) == 1:
+            return artistMusicDirs[0]
+        else:
+            return None
+        
     def getArtists(self):
         return list(self.artistAlbums.keys())
         
@@ -395,6 +420,13 @@ class myMusicBase(primeDirectory):
                 ######################################################################
                 albums = {dirval: maa.getMyMixMusic(dirval) for dirval in artistPrimeDirs}
                 maa.setAlbumData("Mix", albums)
+
+
+                ######################################################################
+                #### Get My Rename Music
+                ######################################################################
+                albums = {dirval: maa.getMyRenameMusic(dirval) for dirval in artistPrimeDirs}
+                maa.setAlbumData("Rename", albums)
 
 
                 ######################################################################

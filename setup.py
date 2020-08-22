@@ -3,7 +3,7 @@ import setuptools
 
 setup(
   name = 'music',
-  py_modules = ['musicBase'],
+  py_modules = ['musicBase', 'matchAlbums', 'matchMyMusic', 'matchMusicName', 'primeDirectory'],
   version = '0.0.1',
   description = 'A Python Wrapper for Music Data',
   long_description = open('README.md').read(),
