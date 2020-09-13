@@ -315,23 +315,32 @@ class matchMyMusic:
         return artistAlbums
 
             
-    def searchForMutualDBEntries(self, cutoff=0.8, maxAdds=50):
+    def searchForMutualDBEntries(self, cutoff=0.8, maxAdds=50, start=None):
         ######################################################################
         #### Get Map of Artists and Unmatched Albums
         ######################################################################
         dbartists = self.mdb.getArtists()
         cnts      = 0
         print("Searching for mutual DB matches for {0} artists".format(len(dbartists)))
-        for dbartist in dbartists:
+        for ia,dbartist in enumerate(dbartists):
+            if start is not None:
+                if ia < start:
+                    continue
+            if ia % 100 == 0:
+                print("## {0}/{1}".format(ia,len(dbartists)))
             if cnts >= maxAdds:
                 break
             artistAlbums = self.getMatchedArtistAlbumsFromDB(dbartist, merge=True)
             dbsToSearch  = self.getArtistDBMatchLists(dbartist)
-            
-            ############################
+
+            usefulDBs          = ['Discogs', 'MusicBrainz', 'AllMusic', 'LastFM']
+            usefulDBsToSearch  = list(set(dbsToSearch["Unmatched"]).intersection(set(usefulDBs)))
+
+
+            ########################################################
             ## Loop Over Unmatched DBs
-            ############################
-            for db in dbsToSearch["Unmatched"]:
+            ########################################################
+            for db in usefulDBsToSearch:
                 dbMatches = {}
                 artistDBartists = self.mdb.getArtistDBIDs(dbartist, db, num=10, cutoff=cutoff, debug=False)
                 
@@ -371,7 +380,7 @@ class matchMyMusic:
                                 bestMatch = {"ID": artistDBID, "Matches": ma.near, "Score": ma.score}
 
                     if bestMatch["ID"] is not None:
-                        cnts += 1
+                        cnts += 1                 
                         print("mdb.add(\"{0}\", \"{1}\", \"{2}\")".format(dbartist, db, bestMatch["ID"]))
                         
 
