@@ -22,7 +22,7 @@ class primeDirectory:
             if artistName.startswith("The "):
                 return "The"
             return start
-        if start in ascii_lowercase:
+        elif start in ascii_lowercase:
             return "Xtra"
         elif start in digits:
             return "Num"
