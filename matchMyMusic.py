@@ -313,9 +313,10 @@ class matchMyMusic:
             artistAlbums = albumTypesData
 
         return artistAlbums
-
-            
-    def searchForMutualDBEntries(self, cutoff=0.8, maxAdds=50, start=None):
+    
+    
+    
+    def searchForMutualDBEntriesByDB(self, db, cutoff=0.875, maxAdds=50, start=None, modVal=100, maxAlbumsForSearch=500):
         ######################################################################
         #### Get Map of Artists and Unmatched Albums
         ######################################################################
@@ -326,14 +327,97 @@ class matchMyMusic:
             if start is not None:
                 if ia < start:
                     continue
-            if ia % 100 == 0:
-                print("## {0}/{1}".format(ia,len(dbartists)))
+            if ia % modVal == 0:
+                print("## {0: <20} -- {1}".format("{0}/{1}".format(ia,len(dbartists)),dbartist))
+            if cnts >= maxAdds:
+                break
+            
+            status = self.mdb.getArtistDBData(dbartist, db)
+            if status["ID"] is not None:
+                continue
+            artistAlbums = self.getMatchedArtistAlbumsFromDB(dbartist, merge=True)
+
+
+            ########################################################
+            ## Loop Over Unmatched DBs
+            ########################################################
+            dbMatches = {}
+            artistDBartists = self.mdb.getArtistDBIDs(dbartist, db, num=10, cutoff=cutoff, debug=False)
+            matchStatus = True
+            for artistDBartist,artistDBIDs in artistDBartists.items():
+                if matchStatus is False:
+                    continue
+                #print('  ',db,'\t',artistDBartist)
+                for artistDBID in artistDBIDs:
+                    #print('    ',artistDBID)
+                    dbMatches[artistDBID] = {}
+                    artistDBAlbumsFromID = self.mdb.getArtistAlbumsFromID(db, artistDBID)
+
+                    albumTypesData = {k: [] for k in [1,2,3,4]}
+                    for albumType in albumTypesData.keys():
+                        for mediaType, mediaTypeAlbums in artistDBAlbumsFromID.items():
+                            if mediaType not in self.mdb.getDBAlbumTypeNames(db, albumType):
+                                continue
+                            albumTypesData[albumType] += list(mediaTypeAlbums.values())
+
+                    albumTypesData = {k: list(set(v)) for k,v in albumTypesData.items()}
+                    dbArtistAlbums = getFlatList(albumTypesData.values())
+                    if len(dbArtistAlbums) > maxAlbumsForSearch:
+                        matchStatus = False
+                        print("#\tNot checking {0} because there are {1} > {2} albums".format(dbartist, len(dbArtistAlbums), maxAlbumsForSearch))
+                        continue
+
+
+                    ma = matchAlbums(cutoff=cutoff)
+                    ma.match(artistAlbums, dbArtistAlbums)
+                    #ma.show(debug=True)
+
+                    dbMatches[artistDBID] = ma
+
+            if matchStatus is False:
+                continue
+                
+                
+            if len(dbMatches) > 0:
+                bestMatch = {"ID": None, "Matches": 0, "Score": 0.0}
+                for artistDBID,ma in dbMatches.items():
+                    if ma.near == 0:
+                        continue
+                    if ma.near > bestMatch["Matches"]:
+                        bestMatch = {"ID": artistDBID, "Matches": ma.near, "Score": ma.score}
+                    elif ma.near == bestMatch["Matches"]:
+                        if ma.score > bestMatch["Score"]:
+                            bestMatch = {"ID": artistDBID, "Matches": ma.near, "Score": ma.score}
+
+                if bestMatch["ID"] is not None:
+                    cnts += 1                 
+                    print("mdb.add(\"{0}\", \"{1}\", \"{2}\")".format(dbartist, db, bestMatch["ID"]))
+
+
+
+            
+    def searchForMutualDBEntries(self, cutoff=0.875, maxAdds=50, start=None, modVal=100, dbs=None):
+        ######################################################################
+        #### Get Map of Artists and Unmatched Albums
+        ######################################################################
+        dbartists = self.mdb.getArtists()
+        cnts      = 0
+        print("Searching for mutual DB matches for {0} artists".format(len(dbartists)))
+        for ia,dbartist in enumerate(dbartists):
+            if start is not None:
+                if ia < start:
+                    continue
+            if ia % modVal == 0:
+                print("## {0: <20} -- {1}".format("{0}/{1}".format(ia,len(dbartists)),dbartist))
             if cnts >= maxAdds:
                 break
             artistAlbums = self.getMatchedArtistAlbumsFromDB(dbartist, merge=True)
             dbsToSearch  = self.getArtistDBMatchLists(dbartist)
 
-            usefulDBs          = ['Discogs', 'MusicBrainz', 'AllMusic', 'LastFM']
+            if dbs is not None:
+                usefulDBs          = ['Discogs', 'MusicBrainz', 'AllMusic', 'LastFM']
+            else:
+                usefulDBs          = dbs
             usefulDBsToSearch  = list(set(dbsToSearch["Unmatched"]).intersection(set(usefulDBs)))
 
 
