@@ -3,7 +3,7 @@ import setuptools
 
 setup(
   name = 'music',
-  py_modules = ['musicBase', 'matchAlbums', 'matchMyMusic', 'matchMusicName', 'primeDirectory'],
+  py_modules = ['musicBase', 'matchMyMusic', 'matchMusicName', 'primeDirectory', 'myMusicDBMap'],
   version = '0.0.1',
   description = 'A Python Wrapper for Music Data',
   long_description = open('README.md').read(),
@@ -21,6 +21,7 @@ setup(
     'Topic :: Utilities'
   ],
   install_requires=['jupyter_contrib_nbextensions'],
-  dependency_links=[]
+  dependency_links=['matchAlbums==0.0.1', 'musicdb==0.0.1'
+                    'git+ssh://git@github.com/tgadf/musicdb.git#egg=musicdb-0.0.1',]
 )
  

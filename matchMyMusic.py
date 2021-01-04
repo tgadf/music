@@ -43,7 +43,7 @@ class matchMyMusic:
                 ######################################################################
                 #### Get Database IDs
                 ######################################################################
-                isKnown = self.mdb.isKnown(artistName)
+                isKnown = self.mdb.isKnownByName(artistName)
                 if isKnown is False:
                     self.unknownArtists[artistName] = artistPrimeDirs
                     if self.debug:
@@ -94,7 +94,7 @@ class matchMyMusic:
         if self.mdb.isKnown(artistName) is True:
             myMusicData = self.mdb.getArtistData(artistName)
             try:
-                artistID = myMusicData[db]["ID"]
+                artistID = myMusicData.getDBID(db)
             except:
                 return matchedAlbums
         else:
