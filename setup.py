@@ -11,7 +11,7 @@ setup(
   author_email = 'tgadfort@gmail.com',
   license = "MIT",
   url = 'https://github.com/tgadf/discogs',
-  keywords = ['Discogs', 'music'],
+  keywords = ['DB', 'music'],
   classifiers = [
     'Development Status :: 3',
     'Intended Audience :: Developers',

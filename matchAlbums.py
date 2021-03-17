@@ -76,8 +76,16 @@ class matchAlbums():
             nearest = {"Album": None, "Ratio": 0.0}
             self.mapping[albumA] = {}
             for albumB in albums2:
-                s     = SequenceMatcher(None, albumA, albumB)
-                ratio = round(s.ratio(),3)
+                if all([albumA,albumB]):
+                    try:
+                        s     = SequenceMatcher(None, albumA, albumB)
+                        ratio = round(s.ratio(),3)
+                    except:
+                        print("A = {0}".format(albumA))
+                        print("B = {0}".format(albumB))
+                        1/0
+                else:
+                    ratio = 0.0
                 self.mapping[albumA][albumB] = ratio
                 if ratio > nearest["Ratio"]:
                     nearest = {"Album": albumB, "Ratio": ratio}
