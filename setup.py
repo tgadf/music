@@ -10,7 +10,7 @@ setup(
   author = 'Thomas Gadfort',
   author_email = 'tgadfort@gmail.com',
   license = "MIT",
-  url = 'https://github.com/tgadf/discogs',
+  url = 'https://github.com/tgadf/music',
   keywords = ['DB', 'music'],
   classifiers = [
     'Development Status :: 3',
