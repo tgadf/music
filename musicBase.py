@@ -1,7 +1,7 @@
 import string
 from fsUtils import isDir, setDir
 from listUtils import getFlatList
-from timeUtils import clock, elapsed
+from timeUtils import clock, elapsed, timestat
 from unicodedata import normalize
 from searchUtils import findDirs, findAll, findNearest
 from fileUtils import getDirBasics, getBaseFilename
@@ -82,6 +82,7 @@ class myArtistAlbums(primeDirectory):
         self.directoryMapping["UnMatched"] = []
         
         self.albumTypeData = {}
+        self.artistDirs    = None
         self.myMusicDirs   = []
         for albumType in self.directoryMapping.keys():
             self.albumTypeData[albumType] = myArtistAlbumType()
@@ -90,8 +91,15 @@ class myArtistAlbums(primeDirectory):
             
 
     ################################################################################################
+    # Artist Directories
+    ################################################################################################
+    def setArtistDirs(self, artistDirs):
+        self.artistDirs = artistDirs
+    
+
+    ################################################################################################
     # Produce Dictionary of Results
-    ###############################################################################################
+    ################################################################################################
     def getDict(self):
         if self.count is True:
             retval = {k: [v.getNumAlbums(),v.getNumFiles()] for k,v in self.albumTypeData.items()}
@@ -368,16 +376,19 @@ class myMusicBase(primeDirectory):
     # Find Artist Albums and Organize
     ###################################################################################################    
     def findArtistAlbums(self, count=False):
-        start, cmt = clock("Finding All Artist Albums")
+        ts = timestat("Finding All Artist Albums")
         
         self.artistAlbums    = {}
         self.artistFileCount = {}
         for primeDir in self.getPrimeDirectories():
-            if self.debug:
-                startPrime, cmtPrime = clock("=====> {0}".format(primeDir))
+            #tsPrime = timestat("Finding Artist Albums For PrimeDir={0}".format(primeDir))
             artistPrimeDirItems = self.getArtistPrimeDirMap(primeDir)
             for artistName, artistPrimeDirs in artistPrimeDirItems.items():
                 maa = myArtistAlbums(artistName=artistName, count=count)
+                maa.setArtistDirs(artistPrimeDirs)
+                self.artistAlbums[artistName] = maa
+                continue
+                
 
 
                 ######################################################################
@@ -461,9 +472,6 @@ class myMusicBase(primeDirectory):
                         for root, dirs, files in walk(artistPrimeDir):
                             self.artistFileCount[artistName] += len(files)
                 
-            #break # (call this if you only want to do the A directories 
-            if self.debug:
-                elapsed(startPrime, cmtPrime)
-                print("")
-                
-        elapsed(start, cmt)
+            #break # (call this if you only want to do the A directories
+            #tsPrime.stop()
+        ts.stop()

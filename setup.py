@@ -1,10 +1,19 @@
-from distutils.core import setup
-import setuptools
+from setuptools import setup
+from setuptools.command.install import install
+from sys import prefix
+
+from myMusicPathData import myMusicPathData
+
+class PostInstallCommand(install):
+    def run(self):
+        install.run(self)
+        mmpd = myMusicPathData(install=True)
 
 setup(
   name = 'music',
-  py_modules = ['musicBase', 'matchMyMusic', 'matchMusicName', 'primeDirectory', 'myMusicDBMap'],
+  py_modules = ['musicBase', 'matchMyMusic', 'matchMusicName', 'primeDirectory', 'myMusicDBMap', 'myMusicPathData'],
   version = '0.0.1',
+  cmdclass={'install': PostInstallCommand},
   description = 'A Python Wrapper for Music Data',
   long_description = open('README.md').read(),
   author = 'Thomas Gadfort',
