@@ -11,7 +11,7 @@ class PostInstallCommand(install):
 
 setup(
   name = 'music',
-  py_modules = ['musicBase', 'matchMyMusic', 'matchMusicName', 'primeDirectory', 'myMusicDBMap', 'myMusicPathData'],
+  py_modules = ['musicBase', 'matchMyMusic', 'matchMusicName', 'primeDirectory', 'myMusicPathData'],
   version = '0.0.1',
   cmdclass={'install': PostInstallCommand},
   description = 'A Python Wrapper for Music Data',
@@ -30,7 +30,6 @@ setup(
     'Topic :: Utilities'
   ],
   install_requires=['jupyter_contrib_nbextensions'],
-  dependency_links=['matchAlbums==0.0.1', 'musicdb==0.0.1'
-                    'git+ssh://git@github.com/tgadf/musicdb.git#egg=musicdb-0.0.1',]
+  dependency_links=[]
 )
  
