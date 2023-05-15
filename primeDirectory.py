@@ -1,6 +1,6 @@
 from string import ascii_uppercase, ascii_lowercase, digits
 
-class primeDirectory:
+class PrimeDirectory:
     def __init__(self, debug=False):
         retvals  = [x for x in ascii_uppercase]
         retvals += ["Num", "Xtra", "The"]
